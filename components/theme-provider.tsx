@@ -47,15 +47,19 @@ function ThemeHotkey() {
         return
       }
 
-      if (event.key.toLowerCase() !== "d") {
-        return
-      }
-
       if (isTypingTarget(event.target)) {
         return
       }
 
-      setTheme(resolvedTheme === "dark" ? "light" : "dark")
+      if (event.key.toLowerCase() === "d") {
+        setTheme(resolvedTheme === "dark" ? "light" : "dark")
+        return
+      }
+
+      if (event.key.toLowerCase() === "r") {
+        setTheme(resolvedTheme === "red-mode" ? "dark" : "red-mode")
+        return
+      }
     }
 
     window.addEventListener("keydown", onKeyDown)
