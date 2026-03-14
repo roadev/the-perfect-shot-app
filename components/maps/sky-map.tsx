@@ -8,8 +8,7 @@ import { MapPin, Compass, Navigation } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-// Public token for demo purposes (usually would be in .env)
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+// Mapbox access token is set dynamically in the component to ensure it uses the latest env variable
 
 interface SkyMapProps {
   latitude?: number;
@@ -48,6 +47,7 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667, elevation, nam
         center: [longitude, latitude],
         zoom: zoom,
         pitch: 45,
+        collectResourceTiming: false, // Helps reduce telemetry noise, though ad-blockers may still flag event requests
       });
 
       map.current = m;
