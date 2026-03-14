@@ -1,48 +1,78 @@
-# The Perfect Shot - Frontend
+# The Perfect Shot - Photographer's Dashboard 📸✨
 
-A modern Next.js application for astrophotography and landscape photography planning.
+> **Plan with Precision. Capture with Passion.**
 
-## Features
+The Perfect Shot is a premium, dark-mode-first dashboard built for the modern astrophotographer. It unifies complex planning data—weather forecasts, celestial event tracking, and location scouting—into a single, high-performance interface.
 
-- **Sky Map**: Interactive sky map for planning shots.
-- **Weather Forecasts**: Specialized forecasts for stargazing.
-- **User Gallery**: Share your best captures with the community.
-- **DO Spaces Integration**: Secure, direct client-side photo uploads using presigned URLs.
+## 🔥 Product Value
 
-## Tech Stack
+Planning for the perfect shot often involves juggling multiple apps (maps, weather, moon phases). This application solves that fragmentation by providing a **unified source of truth**:
+- **Scout**: High-resolution satellite maps with locationcuration.
+- **Timing**: Specialized weather metrics including "Seeing" and "Cloud Cover" visual timelines.
+- **Targets**: Integrated celestial event tracking so you always know what's rising.
+- **Share**: A community gallery to showcase high-resolution results directly from the dashboard.
 
-- **Framework**: Next.js 15 (App Router)
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui
-- **Icons**: Lucide React
-- **API Client**: Custom Fetch wrapper with JWT support
+## 🎨 User Experience (UX)
 
-## Development
+Designed with a **Visual Excellence** first mindset:
 
-1. **Install dependencies**:
+- **Red Mode**: A dedicated high-contrast red mode to preserve night vision while in the field.
+- **Unified Dashboard**: Rearranged layout that prioritizes the most critical data points side-by-side (Map + Forecast).
+- **Premium Aesthetics**: Built with a sleek glassmorphism aesthetic, smooth transitions, and a mobile-responsive grid system.
 
-```bash
-pnpm install
-```
+## 💡 Technical Excellence
 
-2. **Configure environment**:
+The frontend is not just a UI; it's an optimized engine built for **reliability** and **performance**:
 
-Create a `.env.local` file:
+- **Next.js 15 (App Router)**: Utilizing Server Components for lightning-fast initial loads and centralized data fetching.
+- **Vercel Build-Resilience**: Implemented a custom `ApiClient` with **x-vercel-protection-skip** support and robust try-catch logic. This ensures that the application build process is resilient to temporary API protection or downtime, guaranteeing successful deployments.
+- **Secure Storage Flow**: Handles direct-to-cloud uploads using presigned URLs, keeping user secrets secure and reducing server load.
+- **Tailwind CSS & shadcn/ui**: Leveraging a modern design system for consistent, premium visuals and modular code.
 
-```
-NEXT_PUBLIC_API_URL="http://localhost:7000/api"
-```
+---
 
-3. **Start the development server**:
+## 🚦 Getting Started
 
-```bash
-pnpm dev
-```
+### Prerequisites
+- Node.js 22+
+- pnpm
 
-## Storage Implementation
+### Setup Instructions
 
-The application uses **DigitalOcean Spaces** for photo storage. 
+1. **Install Dependencies**:
+   ```bash
+   pnpm install
+   ```
 
-1. The frontend requests a presigned `PUT` URL from the backend.
-2. The file is uploaded directly from the browser to DO Spaces.
-3. The backend is notified of the new photo record after a successful upload.
+2. **Configure Environment**:
+   Create a `.env.local` file:
+   ```env
+   NEXT_PUBLIC_API_URL="http://localhost:7000/api"
+   NEXT_PUBLIC_MAPBOX_TOKEN="your-mapbox-token"
+   # Optional: For build-time bypass of protected backends
+   VERCEL_BYPASS_TOKEN="your-bypass-secret"
+   ```
+
+3. **Run Development Server**:
+   ```bash
+   pnpm dev
+   ```
+
+---
+
+## 📖 Feature Highlights
+
+### 🛰️ Interactive Sky Map
+Scout your next location with high-resolution satellite imagery. Integrated with Mapbox for smooth exploration and location-specific metadata.
+
+### 🌡️ Precision Weather
+Don't just look at "Rain/Sun". Our dashboard breaks down:
+- **Cloud Cover %**: Knowing exactly when the sky clears.
+- **Seeing Metric**: Predicting atmospheric stability for long exposures.
+- **Sky Score**: An aggregate rating of the night's potential.
+
+### 🌑 Red Light Mode
+Toggle the night vision mode to keep your pupils dilated while checking the dashboard in the dark. Essential for field work.
+
+### 🖼️ Instant Gallery
+Upload your captures directly to the community gallery. Powered by DigitalOcean Spaces for high-speed delivery of raw image previews.
