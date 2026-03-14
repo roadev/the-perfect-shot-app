@@ -18,14 +18,17 @@ export default async function Page() {
   try {
     // Get all locations first to pick one dynamic ID
     const locations = await api.getLocations();
-    const activeLocationId = locations.length > 0 ? locations[0].id : null;
+    const activeLocationId = locations.length > 0 ? locations[0].id : 'tatacoa-desert-001';
 
-    if (activeLocationId) {
-      // Fetch forecast for the selected location
-      try {
-        locationData = await api.getLocationWithForecast(activeLocationId);
-      } catch (err) {
-        console.error('Forecast fetch failed:', err);
+    // Fetch forecast for the selected location
+    try {
+      locationData = await api.getLocationWithForecast(activeLocationId);
+    } catch (err) {
+      console.error('Forecast fetch failed:', err);
+      // If specific fetch fails, try to get basic location info at least
+      if (locations.length > 0) {
+        const base = locations.find(l => l.id === activeLocationId) || locations[0];
+        locationData = { ...base, forecasts: [] };
       }
     }
     

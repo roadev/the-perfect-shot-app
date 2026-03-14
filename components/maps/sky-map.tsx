@@ -33,12 +33,10 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
     if (!mapContainer.current) return;
 
     try {
-      // Validate token format roughly before trying to init
       const token = mapboxgl.accessToken;
-      if (!token || token.includes('Placeholder') || token.endsWith('8') ) {
-        // We know this token is likely invalid based on observation
-        // But we'll try anyway and catch the error if possible, 
-        // though Mapbox GL often just logs to console.
+      if (!token || token === "pk.eyJ1Ijoiam9uYXRoYW5yb2EiLCJhIjoiY203YmQ2bW8wMGNnejJscHl2Nmd4eHpxeSJ9.8h9u_b8_8_8_8_8_8_8_8") {
+        setMapError("Mapbox token is missing or invalid. Please check your .env file.");
+        return;
       }
 
       map.current = new mapboxgl.Map({
@@ -49,9 +47,10 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
       });
 
       map.current.on('error', (e) => {
-        const err = e as unknown as { error?: { status?: number }; message?: string };
         console.error('Mapbox error:', e);
-        if (err.error?.status === 401 || err.message?.includes('401')) {
+        // Mapbox generic error type doesn't always expose status, so we use unknown cast
+        const err = e as unknown as { error?: { status?: number }; message?: string };
+        if (err.error?.status === 401 || (err.message && err.message.includes('401'))) {
           setMapError("Invalid Mapbox Access Token. Please check your .env file.");
         }
       });
