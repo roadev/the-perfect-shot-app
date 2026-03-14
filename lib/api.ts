@@ -57,12 +57,17 @@ class ApiClient {
   }
 
   private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    const headers = new Headers(options?.headers);
+    headers.set('Content-Type', 'application/json');
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
+    }
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options?.headers,
-      },
+      headers,
     });
 
     if (!response.ok) {
@@ -94,6 +99,19 @@ class ApiClient {
   // Photos
   async getPublicPhotos(): Promise<Photo[]> {
     return this.fetch<Photo[]>('/photos/public');
+  }
+
+  async getUploadUrl(fileName: string, contentType: string): Promise<{ uploadUrl: string, imageUrl: string, key: string }> {
+    return this.fetch<{ uploadUrl: string, imageUrl: string, key: string }>(
+      `/photos/upload-url?fileName=${encodeURIComponent(fileName)}&contentType=${encodeURIComponent(contentType)}`
+    );
+  }
+
+  async createPhoto(data: { imageUrl: string, celestialTarget?: string, locationId: string }): Promise<Photo> {
+    return this.fetch<Photo>('/photos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 }
 

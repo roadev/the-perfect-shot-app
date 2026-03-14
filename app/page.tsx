@@ -5,6 +5,7 @@ import { GoldenHourTracker } from "@/components/weather/golden-hour-tracker"
 import { GearChecklist } from "@/components/shared/gear-checklist"
 import { RedModeToggle } from "@/components/shared/red-mode-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { UploadButton } from "@/components/shared/upload-button"
 import { api, LocationWithForecast, CelestialEvent, Photo } from "@/lib/api"
 
 export default async function Page() {
@@ -15,20 +16,34 @@ export default async function Page() {
   let error: string | null = null;
 
   try {
-    // Get the first location with its forecast
+    // Get all locations first to pick one dynamic ID
     const locations = await api.getLocations();
-    if (locations.length > 0) {
-      locationData = await api.getLocationWithForecast(locations[0].id);
+    const activeLocationId = locations.length > 0 ? locations[0].id : null;
+
+    if (activeLocationId) {
+      // Fetch forecast for the selected location
+      try {
+        locationData = await api.getLocationWithForecast(activeLocationId);
+      } catch (err) {
+        console.error('Forecast fetch failed:', err);
+      }
     }
     
-    // Get upcoming celestial events
-    celestialEvents = await api.getCelestialEvents(30);
+    // Fetch remaining data independently
+    const [eventsResult, photosResult] = await Promise.allSettled([
+      api.getCelestialEvents(30),
+      api.getPublicPhotos()
+    ]);
 
-    // Get public gallery photos
-    publicPhotos = await api.getPublicPhotos();
+    if (eventsResult.status === 'fulfilled') celestialEvents = eventsResult.value;
+    else console.error('Celestial Events fetch failed:', eventsResult.reason);
+
+    if (photosResult.status === 'fulfilled') publicPhotos = photosResult.value;
+    else console.error('Photos fetch failed:', photosResult.reason);
+
   } catch (err) {
-    error = err instanceof Error ? err.message : 'Failed to fetch data';
-    console.error('API Error:', err);
+    error = err instanceof Error ? err.message : 'Failed to fetch initial data';
+    console.error('Main Page API Error:', err);
   }
 
   // Default location for display
@@ -127,8 +142,16 @@ export default async function Page() {
                 <TabsTrigger value="celestial" className="rounded-xl px-6 font-bold">Celestial Events</TabsTrigger>
                 <TabsTrigger value="gallery" className="rounded-xl px-6 font-bold">User Gallery</TabsTrigger>
               </TabsList>
-              <div className="hidden md:block text-[10px] font-black uppercase text-secondary-foreground/40 tracking-widest">
-                Data Updated: Just Now
+              <div className="flex items-center gap-4">
+                <TabsContent value="gallery" className="mt-0">
+                  <UploadButton 
+                    locationId={location.id} 
+                    onUploadComplete={() => {}} 
+                  />
+                </TabsContent>
+                <div className="hidden md:block text-[10px] font-black uppercase text-secondary-foreground/40 tracking-widest">
+                  Data Updated: Just Now
+                </div>
               </div>
             </div>
             
