@@ -35,6 +35,20 @@ export interface CelestialEvent {
   createdAt: string;
 }
 
+export interface Photo {
+  id: string;
+  imageUrl: string;
+  celestialTarget?: string;
+  cameraMetadata?: Record<string, unknown>;
+  userId: string;
+  locationId: string;
+  createdAt: string;
+  location?: Location;
+  user?: {
+    email: string;
+  };
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -75,6 +89,11 @@ class ApiClient {
   async getCelestialEvents(days?: number): Promise<CelestialEvent[]> {
     const query = days ? `?days=${days}` : '';
     return this.fetch<CelestialEvent[]>(`/celestial-events${query}`);
+  }
+
+  // Photos
+  async getPublicPhotos(): Promise<Photo[]> {
+    return this.fetch<Photo[]>('/photos/public');
   }
 }
 

@@ -5,12 +5,13 @@ import { GoldenHourTracker } from "@/components/weather/golden-hour-tracker"
 import { GearChecklist } from "@/components/shared/gear-checklist"
 import { RedModeToggle } from "@/components/shared/red-mode-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { api, LocationWithForecast, CelestialEvent } from "@/lib/api"
+import { api, LocationWithForecast, CelestialEvent, Photo } from "@/lib/api"
 
 export default async function Page() {
   // Fetch data from API
   let locationData: LocationWithForecast | null = null;
   let celestialEvents: CelestialEvent[] = [];
+  let publicPhotos: Photo[] = [];
   let error: string | null = null;
 
   try {
@@ -22,6 +23,9 @@ export default async function Page() {
     
     // Get upcoming celestial events
     celestialEvents = await api.getCelestialEvents(30);
+
+    // Get public gallery photos
+    publicPhotos = await api.getPublicPhotos();
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to fetch data';
     console.error('API Error:', err);
@@ -160,13 +164,28 @@ export default async function Page() {
             </TabsContent>
 
             <TabsContent value="gallery" className="mt-0">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                   {[1,2,3,4].map(i => (
-                     <div key={i} className="aspect-square rounded-3xl bg-secondary/20 border border-border/50 flex items-center justify-center overflow-hidden group">
-                        <div className="w-full h-full bg-gradient-to-tr from-primary/20 to-transparent group-hover:scale-110 transition-transform duration-500" />
-                     </div>
-                   ))}
-                </div>
+                {publicPhotos.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {publicPhotos.map((photo) => (
+                      <div key={photo.id} className="aspect-square rounded-3xl bg-secondary/20 border border-border/50 flex flex-col overflow-hidden group relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img 
+                          src={photo.imageUrl} 
+                          alt={photo.celestialTarget || "Astrophotography"} 
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                           <p className="text-[10px] font-bold text-white truncate">{photo.celestialTarget}</p>
+                           <p className="text-[8px] text-white/70 truncate">by {photo.user?.email.split('@')[0]}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-12 text-center rounded-3xl bg-secondary/20 border border-border/50">
+                    <p className="text-muted-foreground font-medium italic">No public photos in the gallery yet. Be the first to share!</p>
+                  </div>
+                )}
             </TabsContent>
         </Tabs>
       </section>

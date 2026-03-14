@@ -19,35 +19,45 @@ interface GoldenHourTrackerProps {
 
 export function GoldenHourTracker({ latitude = 3.2333, longitude = -75.1667 }: GoldenHourTrackerProps) {
   const [nextEvent, setNextEvent] = React.useState<SolarEvent | null>(null)
+  const [now, setNow] = React.useState(new Date())
 
   React.useEffect(() => {
-    const lat = latitude
-    const lng = longitude
-    const date = new Date()
+    const updateEvents = () => {
+      const currentTime = new Date()
+      setNow(currentTime)
+      
+      const lat = latitude
+      const lng = longitude
+      
+      const today = SunCalc.getTimes(currentTime, lat, lng)
+      const tomorrowDate = new Date(currentTime)
+      tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+      const tomorrow = SunCalc.getTimes(tomorrowDate, lat, lng)
 
-    const solarTimes = SunCalc.getTimes(date, lat, lng)
+      const events: SolarEvent[] = [
+        { name: "Golden Hour", time: today.goldenHour },
+        { name: "Sunset", time: today.sunset },
+        { name: "Blue Hour", time: today.dusk },
+        { name: "Sunrise", time: tomorrow.sunrise },
+        { name: "Golden Hour (AM)", time: tomorrow.goldenHourEnd },
+      ].sort((a, b) => a.time.getTime() - b.time.getTime())
 
-    // Find the next golden hour/sunset event
-    const events: SolarEvent[] = [
-      { name: "Golden Hour", time: solarTimes.goldenHour },
-      { name: "Sunset", time: solarTimes.sunset },
-      { name: "Blue Hour", time: solarTimes.dusk },
-    ].sort((a, b) => a.time.getTime() - b.time.getTime())
+      const next = events.find((e) => e.time > currentTime) || events[0]
+      setNextEvent(next)
+    }
 
-    const next = events.find((e) => e.time > date) || events[0]
-    setNextEvent(next)
-
-    const timer = setInterval(() => {
-      // Force refresh if needed
-    }, 60000)
+    updateEvents()
+    const timer = setInterval(updateEvents, 60000)
 
     return () => clearInterval(timer)
   }, [latitude, longitude])
 
   if (!nextEvent) return null
 
-  const timeLeft = nextEvent.time.getTime() - new Date().getTime()
+  const timeLeft = nextEvent.time.getTime() - now.getTime()
+  const totalDuration = 60 * 60 * 1000 // 60 minutes for progress baseline
   const minutesLeft = Math.max(0, Math.floor(timeLeft / (1000 * 60)))
+  const progressValue = Math.min(100, Math.max(0, 100 - (timeLeft / totalDuration) * 100))
 
   return (
     <Card className="overflow-hidden rounded-3xl border-none bg-gradient-to-br from-orange-500/10 to-blue-500/10 shadow-xl">
@@ -66,7 +76,7 @@ export function GoldenHourTracker({ latitude = 3.2333, longitude = -75.1667 }: G
           </div>
           <div className="text-right">
             <div className="text-3xl font-black text-primary">
-              {minutesLeft}m
+              {minutesLeft > 60 ? `${Math.floor(minutesLeft / 60)}h ${minutesLeft % 60}m` : `${minutesLeft}m`}
             </div>
             <div className="text-[10px] font-bold whitespace-nowrap text-muted-foreground uppercase">
               Countdown
@@ -85,7 +95,7 @@ export function GoldenHourTracker({ latitude = 3.2333, longitude = -75.1667 }: G
             </span>
           </div>
           <Progress
-            value={Math.min(100, 100 - (minutesLeft / 60) * 100)}
+            value={progressValue}
             className="h-2 bg-secondary"
           />
         </div>

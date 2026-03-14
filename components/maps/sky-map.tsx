@@ -22,6 +22,7 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
   const [lng, setLng] = React.useState(longitude);
   const [lat, setLat] = React.useState(latitude);
   const [zoom, setZoom] = React.useState(9);
+  const [mapError, setMapError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (map.current) {
@@ -31,72 +32,109 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
     }
     if (!mapContainer.current) return;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: "mapbox://styles/mapbox/dark-v11",
-      center: [longitude, latitude],
-      zoom: zoom
-    });
+    try {
+      // Validate token format roughly before trying to init
+      const token = mapboxgl.accessToken;
+      if (!token || token.includes('Placeholder') || token.endsWith('8') ) {
+        // We know this token is likely invalid based on observation
+        // But we'll try anyway and catch the error if possible, 
+        // though Mapbox GL often just logs to console.
+      }
 
-    map.current.on('move', () => {
-      if (!map.current) return;
-      setLng(Number(map.current.getCenter().lng.toFixed(4)));
-      setLat(Number(map.current.getCenter().lat.toFixed(4)));
-      setZoom(Number(map.current.getZoom().toFixed(2)));
-    });
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: "mapbox://styles/mapbox/dark-v11",
+        center: [longitude, latitude],
+        zoom: zoom
+      });
 
-    // Add Heatmap Layer (Simulated Light Pollution)
-    map.current.on('load', () => {
-       if (!map.current) return;
-       
-       // Add a source for the light pollution heatmap
-       // In a real app, this would be a GeoJSON from a server
-       map.current.addSource('light-pollution', {
-         type: 'geojson',
-         data: {
-           type: 'FeatureCollection',
-           features: [
-             { type: 'Feature', geometry: { type: 'Point', coordinates: [longitude, latitude] }, properties: { intensity: 2 } },
-             { type: 'Feature', geometry: { type: 'Point', coordinates: [longitude + 0.05, latitude + 0.03] }, properties: { intensity: 3 } },
-             { type: 'Feature', geometry: { type: 'Point', coordinates: [longitude - 0.04, latitude - 0.02] }, properties: { intensity: 4 } },
-           ]
-         }
-       });
+      map.current.on('error', (e) => {
+        const err = e as unknown as { error?: { status?: number }; message?: string };
+        console.error('Mapbox error:', e);
+        if (err.error?.status === 401 || err.message?.includes('401')) {
+          setMapError("Invalid Mapbox Access Token. Please check your .env file.");
+        }
+      });
 
-       map.current.addLayer({
-         id: 'light-pollution-heat',
-         type: 'heatmap',
-         source: 'light-pollution',
-         maxzoom: 15,
-         paint: {
-           'heatmap-weight': ['get', 'intensity'],
-           'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
-           'heatmap-color': [
-             'interpolate',
-             ['linear'],
-             ['heatmap-density'],
-             0, 'rgba(0,0,0,0)',
-             0.2, 'rgb(0,0,255)',
-             0.4, 'rgb(0,255,255)',
-             0.6, 'rgb(0,255,0)',
-             0.8, 'rgb(255,255,0)',
-             1, 'rgb(255,0,0)'
-           ],
-           'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
-           'heatmap-opacity': 0.6
-         }
-       });
-    });
+      map.current.on('move', () => {
+        if (!map.current) return;
+        setLng(Number(map.current.getCenter().lng.toFixed(4)));
+        setLat(Number(map.current.getCenter().lat.toFixed(4)));
+        setZoom(Number(map.current.getZoom().toFixed(2)));
+      });
+
+      map.current.on('load', () => {
+         if (!map.current) return;
+         setMapError(null);
+         
+         // Add a source for the light pollution heatmap
+         // In a real app, this would be a GeoJSON from a server
+         map.current.addSource('light-pollution', {
+           type: 'geojson',
+           data: {
+             type: 'FeatureCollection',
+             features: [
+               { type: 'Feature', geometry: { type: 'Point', coordinates: [longitude, latitude] }, properties: { intensity: 2 } },
+               { type: 'Feature', geometry: { type: 'Point', coordinates: [longitude + 0.05, latitude + 0.03] }, properties: { intensity: 3 } },
+               { type: 'Feature', geometry: { type: 'Point', coordinates: [longitude - 0.04, latitude - 0.02] }, properties: { intensity: 4 } },
+             ]
+           }
+         });
+
+         map.current.addLayer({
+           id: 'light-pollution-heat',
+           type: 'heatmap',
+           source: 'light-pollution',
+           maxzoom: 15,
+           paint: {
+             'heatmap-weight': ['get', 'intensity'],
+             'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 0, 1, 15, 3],
+             'heatmap-color': [
+               'interpolate',
+               ['linear'],
+               ['heatmap-density'],
+               0, 'rgba(0,0,0,0)',
+               0.2, 'rgb(0,0,255)',
+               0.4, 'rgb(0,255,255)',
+               0.6, 'rgb(0,255,0)',
+               0.8, 'rgb(255,255,0)',
+               1, 'rgb(255,0,0)'
+             ],
+             'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 0, 2, 15, 20],
+             'heatmap-opacity': 0.6
+           }
+         });
+      });
+    } catch (err) {
+      console.error('Failed to initialize map:', err);
+      setMapError("Failed to initialize map. Verify your API configuration.");
+    }
 
     return () => {
       map.current?.remove();
     };
-  }, [lng, lat, zoom]);
+  }, [lng, lat, zoom, latitude, longitude]);
 
   return (
-    <Card className="relative w-full h-[500px] overflow-hidden border-none shadow-2xl rounded-3xl group">
+    <Card className="relative w-full h-[500px] overflow-hidden border-none shadow-2xl rounded-3xl group bg-slate-950">
       <div ref={mapContainer} className="absolute inset-0" />
       
+      {mapError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm z-20 p-8 text-center">
+            <div className="space-y-4 max-w-md">
+                <div className="mx-auto w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <Navigation className="h-6 w-6 text-red-500 rotate-45" />
+                </div>
+                <h3 className="text-xl font-bold">Map unavailable</h3>
+                <p className="text-sm text-muted-foreground">{mapError}</p>
+                <div className="pt-4 flex flex-col items-center gap-2">
+                   <Badge variant="outline" className="text-[10px] uppercase tracking-tighter opacity-50">Coordinates</Badge>
+                   <div className="font-mono text-lg">{lat}, {lng}</div>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* Overlay UI */}
       <div className="absolute top-4 left-4 z-10 space-y-2">
         <Badge className="bg-background/80 backdrop-blur-md border border-border shadow-lg p-3 rounded-2xl flex items-center gap-2">
