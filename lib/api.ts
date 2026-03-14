@@ -1,5 +1,6 @@
 // API client for The Perfect Shot backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:7000/api';
+console.log(`[ApiClient] Base URL set to: ${API_BASE_URL}`);
 
 export interface Location {
   id: string;
@@ -68,6 +69,7 @@ class ApiClient {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers,
+      cache: 'no-store',
     });
 
     if (!response.ok) {

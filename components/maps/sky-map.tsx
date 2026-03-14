@@ -9,14 +9,16 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
 // Public token for demo purposes (usually would be in .env)
-mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1Ijoiam9uYXRoYW5yb2EiLCJhIjoiY203YmQ2bW8wMGNnejJscHl2Nmd4eHpxeSJ9.8h9u_b8_8_8_8_8_8_8_8"; // Placeholder
+mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
 interface SkyMapProps {
   latitude?: number;
   longitude?: number;
+  elevation?: number;
+  name?: string;
 }
 
-export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps) {
+export function SkyMap({ latitude = 3.2333, longitude = -75.1667, elevation, name }: SkyMapProps) {
   const mapContainer = React.useRef<HTMLDivElement>(null);
   const map = React.useRef<mapboxgl.Map | null>(null);
   const [lng, setLng] = React.useState(longitude);
@@ -33,20 +35,29 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
     if (!mapContainer.current) return;
 
     try {
-      const token = mapboxgl.accessToken;
-      if (!token || token === "pk.eyJ1Ijoiam9uYXRoYW5yb2EiLCJhIjoiY203YmQ2bW8wMGNnejJscHl2Nmd4eHpxeSJ9.8h9u_b8_8_8_8_8_8_8_8") {
-        setMapError("Mapbox token is missing or invalid. Please check your .env file.");
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      if (!token || token.length < 20) {
+        setMapError("Mapbox token is missing or too short. Please check your .env file.");
         return;
       }
+      mapboxgl.accessToken = token;
 
-      map.current = new mapboxgl.Map({
+      const m = new mapboxgl.Map({
         container: mapContainer.current,
-        style: "mapbox://styles/mapbox/dark-v11",
+        style: "mapbox://styles/mapbox/satellite-streets-v12",
         center: [longitude, latitude],
-        zoom: zoom
+        zoom: zoom,
+        pitch: 45,
       });
 
-      map.current.on('error', (e) => {
+      map.current = m;
+
+      // Add marker for current location
+      new mapboxgl.Marker({ color: "#3b82f6" })
+        .setLngLat([longitude, latitude])
+        .addTo(m);
+
+      m.on('error', (e) => {
         console.error('Mapbox error:', e);
         // Mapbox generic error type doesn't always expose status, so we use unknown cast
         const err = e as unknown as { error?: { status?: number }; message?: string };
@@ -125,7 +136,7 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
                     <Navigation className="h-6 w-6 text-red-500 rotate-45" />
                 </div>
                 <h3 className="text-xl font-bold">Map unavailable</h3>
-                <p className="text-sm text-muted-foreground">{mapError}</p>
+                <p className="text-sm text-muted-foreground">{mapError || "Mapbox Access Token is missing or invalid. Please check your .env.local file."}</p>
                 <div className="pt-4 flex flex-col items-center gap-2">
                    <Badge variant="outline" className="text-[10px] uppercase tracking-tighter opacity-50">Coordinates</Badge>
                    <div className="font-mono text-lg">{lat}, {lng}</div>
@@ -147,7 +158,7 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
                     <Compass className="h-5 w-5 text-primary" />
                  </div>
                  <div>
-                    <div className="text-[10px] font-black uppercase text-muted-foreground leading-tight">Milky Way Core</div>
+                    <div className="text-[10px] font-black uppercase text-muted-foreground leading-tight">{name || "Tatacoa Desert"}</div>
                     <div className="text-sm font-bold">185° South</div>
                  </div>
              </div>
@@ -155,7 +166,7 @@ export function SkyMap({ latitude = 3.2333, longitude = -75.1667 }: SkyMapProps)
              <div className="space-y-2">
                  <div className="flex justify-between text-[10px] font-bold uppercase text-muted-foreground">
                     <span>Elevation</span>
-                    <span>1,250m</span>
+                    <span>{elevation ? `${elevation}m` : "800m"}</span>
                  </div>
                  <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
                     <div className="h-full bg-primary w-2/3" />

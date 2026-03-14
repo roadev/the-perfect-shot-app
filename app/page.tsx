@@ -22,16 +22,20 @@ export default async function Page() {
     let locations: Location[] = [];
     try {
       locations = await api.getLocations();
+      console.log(`Fetched ${locations.length} locations`);
     } catch (err) {
       console.error('Locations fetch failed:', err);
     }
+    
     const activeLocationId = locations.length > 0 ? locations[0].id : 'tatacoa-desert-001';
+    console.log(`Active Location ID: ${activeLocationId}`);
 
     // Fetch forecast for the selected location
     try {
       locationData = await api.getLocationWithForecast(activeLocationId);
+      console.log(`[DEBUG] Fetched forecast for ${locationData.name}: ${locationData.forecasts?.length} items`);
     } catch (err) {
-      console.error('Forecast fetch failed:', err);
+      console.error(`[ERROR] Forecast fetch failed for ${activeLocationId}:`, err);
       // If specific fetch fails, try to get basic location info at least
       if (locations.length > 0) {
         const base = locations.find(l => l.id === activeLocationId) || locations[0];
@@ -41,19 +45,31 @@ export default async function Page() {
     
     // Fetch remaining data independently
     const [eventsResult, photosResult] = await Promise.allSettled([
-      api.getCelestialEvents(30),
+      api.getCelestialEvents(90),
       api.getPublicPhotos()
     ]);
 
-    if (eventsResult.status === 'fulfilled') celestialEvents = eventsResult.value;
-    else console.error('Celestial Events fetch failed:', eventsResult.reason);
+    if (eventsResult.status === 'fulfilled') {
+      celestialEvents = eventsResult.value;
+      console.log(`[DEBUG] Fetched ${celestialEvents.length} celestial events`);
+    } else {
+      console.error('[ERROR] Celestial Events fetch failed:', eventsResult.reason);
+    }
 
-    if (photosResult.status === 'fulfilled') publicPhotos = photosResult.value;
-    else console.error('Photos fetch failed:', photosResult.reason);
+    if (photosResult.status === 'fulfilled') {
+      publicPhotos = photosResult.value;
+      console.log(`[DEBUG] Fetched ${publicPhotos.length} photos`);
+    } else {
+      console.error('[ERROR] Photos fetch failed:', photosResult.reason);
+    }
+
+    if (!locationData && locations.length === 0) {
+      error = "Could not fetch any location or forecast data from the API.";
+    }
 
   } catch (err) {
     error = err instanceof Error ? err.message : 'Failed to fetch initial data';
-    console.error('Main Page API Error:', err);
+    console.error('[ERROR] Main Page API Error:', err);
   }
 
   // Default location for display
@@ -95,6 +111,8 @@ export default async function Page() {
             <SkyMap 
               latitude={location.latitude} 
               longitude={location.longitude}
+              elevation={location.elevation}
+              name={location.name}
             />
           </section>
           
@@ -165,11 +183,22 @@ export default async function Page() {
             </div>
             
             <TabsContent value="weather" className="mt-0">
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {/* More detailed weather charts would go here */}
-                  <div className="h-32 rounded-3xl bg-secondary/20 border border-border/50 animate-pulse" />
-                  <div className="h-32 rounded-3xl bg-secondary/20 border border-border/50 animate-pulse delay-75" />
-                  <div className="h-32 rounded-3xl bg-secondary/20 border border-border/50 animate-pulse delay-150" />
+               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {location.forecasts.slice(0, 12).map((f, i) => (
+                    <div key={i} className="p-4 rounded-[2rem] bg-secondary/20 border border-white/5 flex flex-col items-center justify-center gap-1 group hover:bg-secondary/30 transition-all duration-300">
+                      <span className="text-[10px] font-black text-muted-foreground uppercase opacity-60">
+                        {new Date(f.date).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                      <div className="text-xl font-black text-primary drop-shadow-[0_0_8px_rgba(var(--primary-rgb),0.3)]">{f.skyScore}</div>
+                      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tighter">Score</span>
+                      <div className="w-full h-1 bg-secondary rounded-full mt-2 overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-1000" 
+                          style={{ width: `${f.skyScore}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
                </div>
             </TabsContent>
             
@@ -179,8 +208,8 @@ export default async function Page() {
                    {celestialEvents.map((event) => (
                      <div key={event.id} className="p-6 rounded-3xl bg-secondary/20 border border-border/50">
                        <h3 className="font-bold text-lg mb-2">{event.name}</h3>
-                       <p className="text-sm text-muted-foreground">
-                         Peak: {new Date(event.peakDate).toLocaleDateString()}
+                       <p className="text-sm text-muted-foreground font-bold">
+                         Peak: {new Date(event.peakDate).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
                        </p>
                        <p className="text-xs text-muted-foreground mt-1">
                          {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
