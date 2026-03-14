@@ -6,7 +6,9 @@ import { GearChecklist } from "@/components/shared/gear-checklist"
 import { RedModeToggle } from "@/components/shared/red-mode-toggle"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadButton } from "@/components/shared/upload-button"
-import { api, LocationWithForecast, CelestialEvent, Photo } from "@/lib/api"
+import { api, LocationWithForecast, CelestialEvent, Photo, Location } from "@/lib/api"
+
+export const dynamic = 'force-dynamic';
 
 export default async function Page() {
   // Fetch data from API
@@ -17,7 +19,12 @@ export default async function Page() {
 
   try {
     // Get all locations first to pick one dynamic ID
-    const locations = await api.getLocations();
+    let locations: Location[] = [];
+    try {
+      locations = await api.getLocations();
+    } catch (err) {
+      console.error('Locations fetch failed:', err);
+    }
     const activeLocationId = locations.length > 0 ? locations[0].id : 'tatacoa-desert-001';
 
     // Fetch forecast for the selected location
@@ -149,7 +156,6 @@ export default async function Page() {
                 <TabsContent value="gallery" className="mt-0">
                   <UploadButton 
                     locationId={location.id} 
-                    onUploadComplete={() => {}} 
                   />
                 </TabsContent>
                 <div className="hidden md:block text-[10px] font-black uppercase text-secondary-foreground/40 tracking-widest">

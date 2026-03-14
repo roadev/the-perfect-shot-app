@@ -7,10 +7,9 @@ import { Loader2, Upload } from "lucide-react";
 
 interface UploadButtonProps {
   locationId: string;
-  onUploadComplete?: () => void;
 }
 
-export function UploadButton({ locationId, onUploadComplete }: UploadButtonProps) {
+export function UploadButton({ locationId }: UploadButtonProps) {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -52,7 +51,6 @@ export function UploadButton({ locationId, onUploadComplete }: UploadButtonProps
       });
 
       alert("Photo uploaded successfully!");
-      if (onUploadComplete) onUploadComplete();
     } catch (error) {
       console.error("Upload error:", error);
       alert(error instanceof Error ? error.message : "Failed to upload photo.");
