@@ -66,6 +66,12 @@ class ApiClient {
       headers.set('Authorization', `Bearer ${token}`);
     }
 
+    // Vercel Deployment Protection Bypass for build-time fetching
+    const bypassToken = process.env.VERCEL_BYPASS_TOKEN;
+    if (bypassToken) {
+      headers.set('x-vercel-protection-skip', bypassToken);
+    }
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
       headers,

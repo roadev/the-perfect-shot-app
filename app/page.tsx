@@ -12,66 +12,59 @@ import { api, LocationWithForecast, CelestialEvent, Photo, Location } from "@/li
 export const dynamic = 'force-dynamic';
 
 export default async function Page() {
-  // Fetch data from API
-  let locationData: LocationWithForecast | null = null;
-  let celestialEvents: CelestialEvent[] = [];
-  let publicPhotos: Photo[] = [];
-  let error: string | null = null;
+    // Fetch data from API
+    let locationData: LocationWithForecast | null = null;
+    let celestialEvents: CelestialEvent[] = [];
+    let publicPhotos: Photo[] = [];
+    let error: string | null = null;
 
-  try {
-    // Get all locations first to pick one dynamic ID
-    let locations: Location[] = [];
     try {
-      locations = await api.getLocations();
-      console.log(`Fetched ${locations.length} locations`);
-    } catch (err) {
-      console.error('Locations fetch failed:', err);
-    }
-    
-    const activeLocationId = locations.length > 0 ? locations[0].id : 'tatacoa-desert-001';
-    console.log(`Active Location ID: ${activeLocationId}`);
-
-    // Fetch forecast for the selected location
-    try {
-      locationData = await api.getLocationWithForecast(activeLocationId);
-      console.log(`[DEBUG] Fetched forecast for ${locationData.name}: ${locationData.forecasts?.length} items`);
-    } catch (err) {
-      console.error(`[ERROR] Forecast fetch failed for ${activeLocationId}:`, err);
-      // If specific fetch fails, try to get basic location info at least
-      if (locations.length > 0) {
-        const base = locations.find(l => l.id === activeLocationId) || locations[0];
-        locationData = { ...base, forecasts: [] };
+      // 1. Get all locations (core data)
+      let locations: Location[] = [];
+      try {
+        locations = await api.getLocations();
+        console.log(`Fetched ${locations.length} locations`);
+      } catch (err) {
+        console.warn('Locations fetch failed (Prerender?):', err instanceof Error ? err.message : err);
       }
-    }
-    
-    // Fetch remaining data independently
-    const [eventsResult, photosResult] = await Promise.allSettled([
-      api.getCelestialEvents(90),
-      api.getPublicPhotos()
-    ]);
+      
+      const activeLocationId = locations.length > 0 ? locations[0].id : 'tatacoa-desert-001';
+      
+      // 2. Fetch forecast and other data in parallel for speed
+      const [forecastResult, eventsResult, photosResult] = await Promise.allSettled([
+        api.getLocationWithForecast(activeLocationId),
+        api.getCelestialEvents(90),
+        api.getPublicPhotos()
+      ]);
 
-    if (eventsResult.status === 'fulfilled') {
-      celestialEvents = eventsResult.value;
-      console.log(`[DEBUG] Fetched ${celestialEvents.length} celestial events`);
-    } else {
-      console.error('[ERROR] Celestial Events fetch failed:', eventsResult.reason);
-    }
+      if (forecastResult.status === 'fulfilled') {
+        locationData = forecastResult.value;
+      } else {
+        console.warn(`Forecast fetch failed for ${activeLocationId}:`, forecastResult.reason);
+        // Fallback to basic location info if available
+        const base = locations.find(l => l.id === activeLocationId);
+        if (base) locationData = { ...base, forecasts: [] };
+      }
 
-    if (photosResult.status === 'fulfilled') {
-      publicPhotos = photosResult.value;
-      console.log(`[DEBUG] Fetched ${publicPhotos.length} photos`);
-    } else {
-      console.error('[ERROR] Photos fetch failed:', photosResult.reason);
-    }
+      if (eventsResult.status === 'fulfilled') {
+        celestialEvents = eventsResult.value;
+      }
 
-    if (!locationData && locations.length === 0) {
-      error = "Could not fetch any location or forecast data from the API.";
-    }
+      if (photosResult.status === 'fulfilled') {
+        publicPhotos = photosResult.value;
+      }
 
-  } catch (err) {
-    error = err instanceof Error ? err.message : 'Failed to fetch initial data';
-    console.error('[ERROR] Main Page API Error:', err);
-  }
+      if (!locationData && locations.length === 0) {
+        // Only set error if we literally have nothing at all
+        error = "Could not fetch any location or forecast data from the API. Check Vercel logs for details.";
+        console.warn("No data fetched from API. Using local defaults.");
+      }
+
+    } catch (err) {
+      // Global fallback to prevent build crash
+      error = err instanceof Error ? err.message : 'Prerender failed';
+      console.error('[CRITICAL] Prerender Error Bypassed:', err);
+    }
 
   // Default location for display
   const location = locationData || {
